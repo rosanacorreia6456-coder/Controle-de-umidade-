@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Controle de Umidade - Seu Ninico (Sincronizado)</title>
+<style>
+:root{--navy:#2b3047;--red:#c8101a;--blue:#1f4e8c;--mix:#2c4a7c;--c:var(--red);--bd:#c9ced6}
+*{box-sizing:border-box}
+body{margin:0;background:#fff;font-family:Arial,Helvetica,sans-serif;color:#222;font-size:14px}
+.wrap{max-width:760px;margin:12px auto;padding:0 8px}
+.top{background:var(--navy);color:#fff;padding:12px 14px;border-radius:6px;font-weight:700;font-size:17px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+.top b{color:#f5a300}
+.status-sync{font-size:11px;background:#10b981;color:#fff;padding:4px 8px;border-radius:12px;font-weight:normal}
+.tabs{display:flex;gap:6px;margin-bottom:8px}
+.tabs button{flex:1;padding:9px 4px;border:1px solid var(--bd);background:#fff;border-radius:6px;font-weight:700;font-size:13px;cursor:pointer;color:#333}
+.tabs button.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.card{background:#fff;border:1px solid var(--bd);border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.12);padding:8px;margin-bottom:10px}
+.row{display:flex;gap:8px;margin-bottom:6px}
+select,input,textarea{font:inherit;border:1px solid #888;border-radius:6px;padding:9px 10px;background:#fff;min-width:0}
+select{flex:1;font-size:14px;font-weight:600}
+.btn{border:1px solid #888;background:#fff;border-radius:6px;padding:9px 14px;font-weight:700;cursor:pointer}
+.del{border-color:var(--red);color:var(--red);background:#fff}
+.search{width:100%}
+.main{padding:0;overflow:hidden;border:0}
+.mh{background:var(--c);color:#fff;font-weight:700;font-size:16px;padding:12px 14px}
+.mb{padding:10px 12px 14px}
+.tg{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.tg button{padding:16px 6px;border-radius:6px;font-weight:700;font-size:14px;cursor:pointer;background:#fff;border:2px solid}
+.tg .doce{border-color:var(--blue);color:var(--blue)}.tg .azedo{border-color:var(--red);color:var(--red)}
+.tg .com,.tg .sem{border-color:var(--mix);color:#222}
+.tg .doce.on{background:var(--blue);color:#fff}.tg .azedo.on{background:var(--red);color:#fff}
+.tg .com.on,.tg .sem.on{background:var(--mix);color:#fff}
+.f{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.f label{font-size:10px;color:#444;display:block;margin-bottom:2px}
+.f input{width:100%}
+table{border-collapse:separate;border-spacing:4px;width:100%}
+th{background:var(--c);color:#fff;font-size:12px;padding:6px 2px}
+td input{width:100%;text-align:center;border:1.5px solid var(--c);padding:10px 2px}
+td.m{font-weight:700;color:var(--c);text-align:center;width:62px;white-space:nowrap}
+td.x{width:24px;text-align:center;color:#999;cursor:pointer;font-size:18px}
+.add{background:var(--c);color:#fff;border:0;border-radius:6px;padding:10px 14px;font-weight:700;cursor:pointer}
+.hint{font-size:11px;color:#666;margin-left:6px}
+textarea{width:100%;min-height:220px;resize:vertical}
+.hide{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <span>AMIFEC — Controle de Umidade — <b>Seu Ninico</b></span>
+    <span class="status-sync" id="syncStat">🟢 Sincronizado</span>
+  </div>
+  
+  <div class="tabs">
+    <button class="on" data-t="reg">1. Registro</button>
+    <button data-t="obs">2. Observações</button>
+  </div>
+
+  <div class="card" id="selCard">
+      <div class="row">
+        <select id="sel"></select>
+        <button class="btn" id="novo">+ Novo Lote</button>
+        <button class="btn del" id="del" title="Excluir lote">🗑</button>
+      </div>
+      <input class="search" id="busca" placeholder="🔍 Buscar lote...">
+  </div>
+
+  <div id="reg">
+    <div class="card main" id="main">
+      <div class="mh" id="mh"></div>
+      <div class="mb">
+        <div class="tg">
+          <button class="doce" data-tipo="doce">Doce (azul)</button>
+          <button class="azedo" data-tipo="azedo">Azedo (vermelho)</button>
+          <button class="com" data-mist="1">Com misturador</button>
+          <button class="sem" data-mist="0">Sem misturador</button>
+        </div>
+        <div class="f">
+          <div><label>Data</label><input type="date" id="data"></div>
+          <div><label>Lote</label><input id="lote" inputmode="numeric"></div>
+        </div>
+        <div style="margin-bottom:4px">Paletes</div>
+        <table>
+          <thead><tr><th>Palete</th><th>Umid. 1</th><th>Umid. 2</th><th>Umid. 3</th><th>Umid. 4</th><th>Média</th><th></th></tr></thead>
+          <tbody id="tb"></tbody>
+        </table>
+        <div style="margin-top:12px">
+          <button class="add" id="addp">+ Adicionar palete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="obs" class="hide">
+    <div class="card main" id="obsCard">
+      <div class="mh" id="obsTit"></div>
+      <div class="mb">
+        <textarea id="obsTxt" placeholder="Observações do lote..."></textarea>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let db = [], cur = null;
+const $ = s => document.querySelector(s);
+const hoje = () => new Date().toISOString().slice(0,10);
+const br = d => d ? d.split('-').reverse().join('/') : '';
+const num = v => { const n = parseFloat(String(v).replace(',','.')); return isNaN(n) ? null : n; };
+const fmt = n => n.toFixed(2).replace('.',',');
+
+function media(p) {
+  const v = p.u.map(num).filter(x => x !== null);
+  return v.length ? v.reduce((a,b) => a+b, 0) / v.length : null;
+}
+
+function novoReg(tipo='doce', mist=true) {
+  return { id: 'lote_' + Date.now(), tipo, mist, data: hoje(), lote: '', obs: '', p: [{n:'1', u:['','','','']}] };
+}
+
+// Sincronização com o Banco de Dados na Nuvem (Vercel / Neon)
+async function carregarDados() {
+  try {
+    const res = await fetch('/api/umidade');
+    if (res.ok) {
+      const dados = await res.json();
+      if (dados && dados.length > 0) {
+        db = dados;
+        if (!cur || !db.find(r => r.id === cur)) cur = db[0].id;
+        tela();
+      }
+    }
+  } catch(e) {
+    console.log("Modo local ou aguardando API");
+  }
+}
+
+async function guardarNuvem() {
+  $('#syncStat').textContent = '🟡 Gravando...';
+  try {
+    await fetch('/api/umidade', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(db)
+    });
+    $('#syncStat').textContent = '🟢 Sincronizado';
+  } catch(e) {
+    $('#syncStat').textContent = '🔴 Erro Conexão';
+  }
+}
+
+function R() { return db.find(r => r.id === cur) || db[0]; }
+const rotulo = r => `${r.tipo==='azedo'?'Azedo':'Doce'} · Lote ${r.lote||'?'} · ${r.mist?'Com mist.':'Sem mist.'} — ${br(r.data)}`;
+
+function lista() {
+  const q = $('#busca').value.trim().toLowerCase();
+  const itens = db.filter(r => !q || String(r.lote).toLowerCase().includes(q) || rotulo(r).toLowerCase().includes(q));
+  $('#sel').innerHTML = itens.map(r => `<option value="${r.id}" ${r.id===cur?'selected':''}>${rotulo(r)}</option>`).join('');
+}
+
+function tela() {
+  if (!db.length) { db = [novoReg()]; cur = db[0].id; }
+  const r = R();
+  $('#main').style.setProperty('--c', r.tipo==='azedo' ? 'var(--red)' : 'var(--blue)');
+  $('#mh').textContent = `Polvilho ${r.tipo==='azedo'?'Azedo':'Doce'} Granulado · ${r.mist?'Com misturador':'Sem misturador'}`;
+  document.querySelectorAll('[data-tipo]').forEach(b => b.classList.toggle('on', b.dataset.tipo === r.tipo));
+  document.querySelectorAll('[data-mist]').forEach(b => b.classList.toggle('on', (b.dataset.mist==='1') === r.mist));
+  $('#data').value = r.data; $('#lote').value = r.lote;
+  
+  $('#tb').innerHTML = r.p.map((p,i) => `<tr><td><input value="${p.n}" data-i="${i}" data-k="n" style="text-align:center"></td>`+
+    p.u.map((v,j) => `<td><input inputmode="decimal" value="${v}" data-i="${i}" data-j="${j}"></td>`).join('')+
+    `<td class="m" id="m${i}">${medTxt(p)}</td><td class="x" data-rm="${i}">✕</td></tr>`).join('');
+  lista();
+}
+
+const medTxt = p => { const m = media(p); return m === null ? '—' : fmt(m); };
+
+$('#tb').addEventListener('input', e => {
+  const t = e.target, r = R(), i = +t.dataset.i;
+  if(t.dataset.k === 'n') r.p[i].n = t.value; else r.p[i].u[+t.dataset.j] = t.value;
+  $('#m'+i).textContent = medTxt(r.p[i]);
+  guardarNuvem();
+});
+
+$('#tb').addEventListener('click', e => {
+  const i = e.target.dataset.rm; if(i === undefined) return;
+  const r = R(); r.p.splice(+i,1); tela(); guardarNuvem();
+});
+
+$('#addp').onclick = () => { const r = R(); r.p.push({n:String(r.p.length+1), u:['','','','']}); tela(); guardarNuvem(); };
+document.querySelectorAll('[data-tipo]').forEach(b => b.onclick = () => { R().tipo = b.dataset.tipo; tela(); guardarNuvem(); });
+document.querySelectorAll('[data-mist]').forEach(b => b.onclick = () => { R().mist = b.dataset.mist==='1'; tela(); guardarNuvem(); });
+$('#data').oninput = e => { R().data = e.target.value; lista(); guardarNuvem(); };
+$('#lote').oninput = e => { R().lote = e.target.value; lista(); guardarNuvem(); };
+$('#sel').onchange = e => { cur = e.target.value; tela(); };
+$('#novo').onclick = () => { const r = novoReg(); db.unshift(r); cur = r.id; tela(); guardarNuvem(); };
+
+// Atualiza e sincroniza automaticamente a cada 3 segundos
+setInterval(carregarDados, 3000);
+carregarDados();
+</script>
+</body>
+</html>
